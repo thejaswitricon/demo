@@ -35,11 +35,6 @@ jobs:
     - name: Run final.py
       run: python final.py
 
-    - name: Configure Git identity
-      run: |
-        git config user.email "thejaswi.cy@triconinfotech.com"
-        git config user.name "thejaswitricon"
-
     - name: Create Branch and Pull Request
       run: |
         git checkout -b feature-branch # Create a new branch
