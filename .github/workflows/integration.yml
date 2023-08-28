@@ -12,7 +12,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
       with:
-        token: ${{ secrets.GH_PAT }}
+        token: ${{ secrets.PAT_GITHUB }}
         fetch-depth: 0
 
 
