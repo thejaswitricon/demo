@@ -10,8 +10,8 @@ import shutil
 
 MONITORS_API_ENDPOINT = "https://synthetics.newrelic.com/synthetics/api/v3/monitors"
 PAGE_SIZE = 100  # Number of monitors to retrieve per page
-CSV_FILE_SOURCE = "../dashboards/dynamic/publishing-journey/data-source.csv"
-destination_file = "../dashboards/dynamic/publishing-journey/data.csv"
+CSV_FILE_SOURCE = "data-source.csv"
+destination_file = "data.csv"
 shutil.copy(CSV_FILE_SOURCE, destination_file)
 
 APPLICATIONS_API_ENDPOINT = "https://api.newrelic.com/v2/applications.json"
