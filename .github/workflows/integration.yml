@@ -1,9 +1,13 @@
-name: CI Pipeline
+name: Update data.csv
 
 on:
   workflow_dispatch:
 
-permissions: write-all
+permissions:
+  contents: read
+  packages: read
+  statuses: write
+  pull-requests: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,7 +34,9 @@ jobs:
         pip install requests  
 
     - name: Set up environment
-      run: echo "NEW_RELIC_API_KEY=${{ secrets.NEW_RELIC_API_KEY }}" >> $GITHUB_ENV
+      run: |
+        echo "NEW_RELIC_API_KEY=${{ secrets.NEW_RELIC_API_KEY }}" >> $GITHUB_ENV
+        echo "NEW_RELIC_ACCOUNT_ID=${{ secrets.NEW_RELIC_ACCOUNT_ID}}" >> $GITHUB_ENV
 
     - name: Run final.py
       run: python final.py
