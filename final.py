@@ -201,5 +201,12 @@ data "newrelic_entity" "app_{idx}" {{
         if os.path.exists('data.tf'):
             os.remove('data.tf')
 
+        if os.path.exists('.terraform.lock.hcl'):
+            os.remove('.terraform.lock.hcl')
+
+        if os.path.exists('.terraform'):
+            os.remove('.terraform')
+
+
     else:
         print("No matching application names found")
