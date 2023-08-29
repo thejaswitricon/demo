@@ -39,7 +39,7 @@ jobs:
         echo "NEW_RELIC_ACCOUNT_ID=${{ secrets.NEW_RELIC_ACCOUNT_ID}}" >> $GITHUB_ENV
 
     - name: Run final.py
-      run: python final.py
+      run: python ./lib/final.py
 
     - name: Create Pull Request
       id: cpr
