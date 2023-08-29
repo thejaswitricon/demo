@@ -205,7 +205,7 @@ data "newrelic_entity" "app_{idx}" {{
             os.remove('.terraform.lock.hcl')
 
         if os.path.exists('.terraform'):
-            os.remove('.terraform')
+            shutil.rmtree('.terraform')
 
 
     else:
