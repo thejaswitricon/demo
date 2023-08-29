@@ -21,14 +21,14 @@ jobs:
 
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: 3.x
 
 
-    - name: Install Python 3
-      run: |
-        pip --version
+    # - name: Install Python 3
+    #   run: sudo apt-get update && sudo apt-get install python3
+
     # - name: Install dependencies
     #   run: |
     #     python -m pip install --upgrade pip
