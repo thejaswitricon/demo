@@ -10,8 +10,8 @@ import shutil
 
 MONITORS_API_ENDPOINT = "https://synthetics.newrelic.com/synthetics/api/v3/monitors"
 PAGE_SIZE = 100  # Number of monitors to retrieve per page
-CSV_FILE_SOURCE = "data-source.csv"
-destination_file = "data.csv"
+CSV_FILE_SOURCE = "../publishing-journey/data-source.csv"
+destination_file = "../publishing-journey/data.csv"
 shutil.copy(CSV_FILE_SOURCE, destination_file)
 
 APPLICATIONS_API_ENDPOINT = "https://api.newrelic.com/v2/applications.json"
@@ -53,7 +53,7 @@ def fetch_monitors_by_type(monitor_type):
 # Load CSV data and prepare a list of service names
 service_names = []
 
-with open("data.csv", mode="r") as csv_file:
+with open("../publishing-journey/data.csv", mode="r") as csv_file:
     csv_reader = csv.DictReader(csv_file)
     for row in csv_reader:
         if row["type"] == "service":
@@ -69,7 +69,7 @@ for monitor_type in ["SIMPLE", "CERT_CHECK", "SCRIPT_API", "SCRIPT_BROWSER", "BR
                 if len(parts) > 1:
                     service_hash = parts[-1]
                     if service_hash.startswith("#"):
-                        with open("data.csv", mode="r") as csv_file:
+                        with open("../publishing-journey/data.csv", mode="r") as csv_file:
                             csv_reader = csv.DictReader(csv_file)
                             data = list(csv_reader)
                             for row in data:
@@ -81,7 +81,7 @@ for monitor_type in ["SIMPLE", "CERT_CHECK", "SCRIPT_API", "SCRIPT_BROWSER", "BR
                                             row["pingMonitorId"] = monitor["id"]
                                     elif "#script" in parts and "#critical" in parts:
                                         row["scriptMonitorId"] = monitor["id"]
-                        with open("data.csv", mode="w", newline="") as csv_file:
+                        with open("../publishing-journey/data.csv", mode="w", newline="") as csv_file:
                             fieldnames = data[0].keys()
                             csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
                             csv_writer.writeheader()
