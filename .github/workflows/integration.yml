@@ -43,6 +43,11 @@ jobs:
         cd lib
         python final.py
 
+    - name: Get Current Date
+      id: date
+      run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+
+
     - name: Create Pull Request
       id: cpr
       uses: peter-evans/create-pull-request@v5
@@ -52,7 +57,7 @@ jobs:
         committer: GitHub <noreply@github.com>
         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
         signoff: false
-        branch: feature-branch
+        branch: feature-branch-${{ steps.date.outputs.date }}  # Appending date to branch name
         delete-branch: true
         title: 'fix(dashboards): update data'
         body: |
