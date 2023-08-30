@@ -169,6 +169,14 @@ data "newrelic_entity" "app_{idx}" {{
         subprocess.run(['terraform', 'init', '-input=false', '-backend=false'], check=True)
         subprocess.run(['terraform', 'apply', '-auto-approve', '-input=false'], check=True)
 
+        # Run tflint and capture the output
+        tflint_command = ['tflint', '--format=json']
+        tflint_output = subprocess.run(tflint_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    
+        # Print tflint output
+        print("Tflint Output:")
+        print(tflint_output.stdout)
+
         time.sleep(5)
 
         entity_guids = {}
