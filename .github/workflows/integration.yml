@@ -26,7 +26,9 @@ jobs:
         python-version: 3.x
 
     - name: Install Python 3
-      run: sudo apt-get update && sudo apt-get install python3
+      run: |
+        sudo apt-get update && sudo apt-get install python3
+        which terraform
 
     - name: Install dependencies
       run: |
