@@ -166,8 +166,8 @@ data "newrelic_entity" "app_{idx}" {{
 
         print("Terraform configurations written to data.tf")
 
-        subprocess.run(['terraform', 'init', '-input=false', '-backend=false'], check=True)
-        subprocess.run(['terraform', 'apply', '-auto-approve', '-input=false'], check=True)
+        subprocess.run(['/usr/bin/terraform', 'init', '-input=false', '-backend=false'], check=True)
+        subprocess.run(['/usr/bin/terraform', 'apply', '-auto-approve', '-input=false'], check=True)
 
         # Run tflint and capture the output
         tflint_command = ['tflint', '--format=json']
