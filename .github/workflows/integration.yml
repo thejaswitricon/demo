@@ -57,8 +57,8 @@ jobs:
       with:
         token: ${{ secrets.PAT_GITHUB }}
         commit-message: Update data.csv file
-        committer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-        author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+        committer: GitHub <noreply@github.com>
+        author: GitHub <noreply@github.com>
         signoff: false
         branch: fix-update-dashboard-${{ steps.date.outputs.date }}  # Appending date to branch name
         delete-branch: true
