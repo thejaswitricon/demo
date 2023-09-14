@@ -5,6 +5,7 @@ import subprocess
 import time
 import shutil
 
+
 # Define the base directory where you want to search for subdirectories
 base_directory = "../dashboards/dynamic"
 
@@ -51,6 +52,7 @@ if os.path.exists(data_csv_file):
             offset = 0
             limit = PAGE_SIZE
             monitors = []
+            TIMEOUT_SECONDS = 10
 
             while True:
                 params = {
@@ -120,6 +122,7 @@ if os.path.exists(data_csv_file):
                 "offset": offset,
                 "limit": PAGE_SIZE
             }
+            TIMEOUT_SECONDS = 10
 
             response = requests.get(APPLICATIONS_API_ENDPOINT, headers=headers, params=params, timeout=20)
 
@@ -186,9 +189,12 @@ if os.path.exists(data_csv_file):
         '''
                         tf_output_config = f'''
         output "{service_name}" {{
-        value = data.newrelic_entity.app_{idx}.guid
-        }}
-        '''
+      value = {{
+        guid           = data.newrelic_entity.app_{idx}.guid
+        application_id = data.newrelic_entity.app_{idx}.application_id
+      }}
+    }}
+    '''
                         tf_file.write(tf_config)
                         tf_file.write('\n')
                         tf_file.write(tf_output_config)  # Adding output configuration
@@ -210,11 +216,11 @@ if os.path.exists(data_csv_file):
                 print("Terraform configurations written to data.tf")
                 
                 # Run terraform fmt to format the configuration file
-                subprocess.run(['terraform', 'fmt'], check=True)  # nosec
+                subprocess.run(['terraform', 'fmt'], check=True) # nosec
                 print("Terraform format check complete.")
 
                 # Run terraform validate to check the configuration's validity
-                validate_process = subprocess.run(['terraform', 'validate'], capture_output=True, text=True)  # nosec  
+                validate_process = subprocess.run(['terraform', 'validate'], capture_output=True, text=True)
                 if validate_process.returncode == 0:
                     print("Terraform validation successful.")
                 else:
@@ -222,23 +228,34 @@ if os.path.exists(data_csv_file):
                     print(validate_process.stdout)
                     print(validate_process.stderr)
 
-                subprocess.run(['terraform', 'init', '-input=false', '-backend=false'], check=True)  # nosec
+                subprocess.run(['terraform', 'init', '-input=false', '-backend=false'], check=True) # nosec
 
                 time.sleep(5)
-                apply_process = subprocess.run(['terraform', 'apply', '-auto-approve', '-input=false'], capture_output=True, text=True, shell=True)  # nosec
+                apply_process = subprocess.run(['terraform', 'apply', '-auto-approve', '-input=false'], capture_output=True, text=True, shell=True) # nosec
                 if apply_process.returncode == 0:
                     apply_output = apply_process.stdout
 
-                    # Extract GUIDs from the apply_output using string manipulation or regex
-                    tf_outputs = {}  # Create an empty dictionary to store extracted GUIDs
-                    output_lines = apply_output.split("\n")
-                    for line in output_lines:
-                        if "=" in line:
-                            parts = line.split("=")
-                            service_name = parts[0].strip()
-                            guid = parts[1].strip().replace('"', '')
-                            tf_outputs[service_name] = guid
-                            print(f"Extracted GUID for {service_name}: {guid}")
+                    # Split the output text into blocks
+                    tf_outputs = {}
+                    output_blocks = apply_output.strip().split('\n}\n')
+
+                    # Iterate over each block and extract data
+                    for block in output_blocks:
+                        lines = block.split('\n')
+                        service_name = lines[0].strip()[:-1]  # Remove the trailing '='
+                        data = {}
+                        for line in lines[1:]:
+                            key, value = line.strip().split(' = ')
+                            key = key.strip('" ')
+                            value = value.strip('" ')
+                            data[key] = value
+                        tf_outputs[service_name] = data
+
+                    # Print the extracted data
+                    for service_name, data in tf_outputs.items():
+                        print(f"Service Name: {service_name}")
+                        print(f"Application ID: {data['application_id']}")
+                        print(f"GUID: {data['guid']}")
 
                 # Update the CSV based on the tf_outputs dictionary
                 update_entity_guids_csv(tf_outputs)
@@ -259,75 +276,3 @@ if os.path.exists(data_csv_file):
 
 else:
     print("data.csv file not found in the dynamic folder")
-=======
-
-    if matching_application_guids:
-        with open("data.tf", "w") as tf_file:
-            tf_file.write('''
-# Terraform data blocks
-''')
-            for idx, service_name in enumerate(matching_application_guids, start=1):
-                tf_config = f'''
-data "newrelic_entity" "app_{idx}" {{
-  name = "{service_name}"
-  domain = "APM"
-}}
-'''
-                tf_file.write(tf_config)
-                tf_file.write('\n')
-                print(f"Terraform configuration added for: {service_name}")
-
-        print("Terraform configurations written to data.tf")
-
-        subprocess.run(['/usr/local/bin/terraform', 'init', '-input=false', '-backend=false'], check=True)
-        subprocess.run(['/usr/local/bin/terraform', 'apply', '-auto-approve', '-input=false'], check=True)
-
-        # Run tflint and capture the output
-        tflint_command = ['tflint', '--format=json']
-        tflint_output = subprocess.run(tflint_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    
-        # Print tflint output
-        print("Tflint Output:")
-        print(tflint_output.stdout)
-
-        time.sleep(5)
-
-        entity_guids = {}
-        try:
-            with open('terraform.tfstate', 'r') as state_file:
-                state_data = json.load(state_file)
-                resources = state_data.get("resources", [])
-                for resource in resources:
-                    if resource.get("type") == "newrelic_entity":
-                        service_name = resource.get("instances", [{}])[0].get("attributes", {}).get("name")
-                        guid = resource.get("instances", [{}])[0].get("attributes", {}).get("guid")
-                        if service_name and guid:
-                            entity_guids[service_name] = guid
-        except Exception as e:
-            print("Error reading terraform.tfstate:", e)
-
-        for service_name, guid in entity_guids.items():
-            matching_application_guids[service_name] = guid
-            print(f"Service Name: {service_name}, Entity GUID: {guid}")
-
-        update_entity_guids_csv(matching_application_guids)
-        print("Updated data.csv with entity GUIDs")
-
-        if os.path.exists('terraform.tfstate'):
-            os.remove('terraform.tfstate')
-
-        if os.path.exists('terraform.tfstate.backup'):
-            os.remove('terraform.tfstate.backup')
-
-        if os.path.exists('data.tf'):
-            os.remove('data.tf')
-
-        if os.path.exists('.terraform.lock.hcl'):
-            os.remove('.terraform.lock.hcl')
-
-        if os.path.exists('.terraform'):
-            shutil.rmtree('.terraform')
-
-
-    else:
-        print("No matching application names found")
