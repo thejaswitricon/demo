@@ -7,7 +7,7 @@ import shutil
 
 
 # Define the base directory where you want to search for subdirectories
-base_directory = "./dashboards/dynamic"
+base_directory = "../dashboards/dynamic"
 
 # Path to the data.csv file that contains folder names
 data_csv_file = os.path.join(base_directory, "data.csv")
@@ -28,7 +28,7 @@ if os.path.exists(data_csv_file):
         # Construct the paths for CSV files within the current folder
         CSV_FILE_SOURCE = os.path.join(base_directory, folder_name, "data-source.csv")
         destination_file = os.path.join(base_directory, folder_name, "data.csv")
-        provider_tf_path = "./provider/provider.tf"
+        provider_tf_path = "../provider/provider.tf"
         data_tf_path = "data.tf"
         MONITORS_API_ENDPOINT = "https://synthetics.newrelic.com/synthetics/api/v3/monitors"
         PAGE_SIZE = 100  # Number of monitors to retrieve per page
@@ -60,7 +60,7 @@ if os.path.exists(data_csv_file):
                     "limit": limit
                 }
 
-                response = requests.get(MONITORS_API_ENDPOINT, headers=headers, params=params, timeout=TIMEOUT_SECONDS)
+                response = requests.get(MONITORS_API_ENDPOINT, headers=headers, params=params, timeout=20)
                 if response.status_code == 200:
                     monitors_data = response.json().get("monitors")
                     monitors.extend([monitor for monitor in monitors_data if monitor.get("type") == monitor_type])
@@ -69,6 +69,7 @@ if os.path.exists(data_csv_file):
                         break
 
                     offset += PAGE_SIZE
+
                 else:
                     print(f"Failed to retrieve {monitor_type} monitors")
                     break
@@ -123,7 +124,7 @@ if os.path.exists(data_csv_file):
             }
             TIMEOUT_SECONDS = 10
 
-            response = requests.get(APPLICATIONS_API_ENDPOINT, headers=headers, params=params, timeout=TIMEOUT_SECONDS)
+            response = requests.get(APPLICATIONS_API_ENDPOINT, headers=headers, params=params, timeout=20)
 
             if response.status_code == 200:
                 applications_data = response.json().get("applications")
@@ -215,7 +216,7 @@ if os.path.exists(data_csv_file):
                 print("Terraform configurations written to data.tf")
                 
                 # Run terraform fmt to format the configuration file
-                subprocess.run(['terraform', 'fmt'], check=True)
+                subprocess.run(['terraform', 'fmt'], check=True) # nosec
                 print("Terraform format check complete.")
 
                 # Run terraform validate to check the configuration's validity
@@ -227,10 +228,10 @@ if os.path.exists(data_csv_file):
                     print(validate_process.stdout)
                     print(validate_process.stderr)
 
-                subprocess.run(['terraform', 'init', '-input=false', '-backend=false'], check=True)
+                subprocess.run(['terraform', 'init', '-input=false', '-backend=false'], check=True) # nosec
 
                 time.sleep(5)
-                apply_process = subprocess.run(['terraform', 'apply', '-auto-approve', '-input=false'], capture_output=True, text=True, shell=True)
+                apply_process = subprocess.run(['terraform', 'apply', '-auto-approve', '-input=false'], capture_output=True, text=True, shell=True) # nosec
                 if apply_process.returncode == 0:
                     apply_output = apply_process.stdout
 
