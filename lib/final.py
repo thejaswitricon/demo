@@ -67,6 +67,7 @@ if os.path.exists(data_csv_file):
                         break
 
                     offset += PAGE_SIZE
+
                 else:
                     print(f"Failed to retrieve {monitor_type} monitors")
                     break
@@ -258,3 +259,75 @@ if os.path.exists(data_csv_file):
 
 else:
     print("data.csv file not found in the dynamic folder")
+=======
+
+    if matching_application_guids:
+        with open("data.tf", "w") as tf_file:
+            tf_file.write('''
+# Terraform data blocks
+''')
+            for idx, service_name in enumerate(matching_application_guids, start=1):
+                tf_config = f'''
+data "newrelic_entity" "app_{idx}" {{
+  name = "{service_name}"
+  domain = "APM"
+}}
+'''
+                tf_file.write(tf_config)
+                tf_file.write('\n')
+                print(f"Terraform configuration added for: {service_name}")
+
+        print("Terraform configurations written to data.tf")
+
+        subprocess.run(['/usr/local/bin/terraform', 'init', '-input=false', '-backend=false'], check=True)
+        subprocess.run(['/usr/local/bin/terraform', 'apply', '-auto-approve', '-input=false'], check=True)
+
+        # Run tflint and capture the output
+        tflint_command = ['tflint', '--format=json']
+        tflint_output = subprocess.run(tflint_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    
+        # Print tflint output
+        print("Tflint Output:")
+        print(tflint_output.stdout)
+
+        time.sleep(5)
+
+        entity_guids = {}
+        try:
+            with open('terraform.tfstate', 'r') as state_file:
+                state_data = json.load(state_file)
+                resources = state_data.get("resources", [])
+                for resource in resources:
+                    if resource.get("type") == "newrelic_entity":
+                        service_name = resource.get("instances", [{}])[0].get("attributes", {}).get("name")
+                        guid = resource.get("instances", [{}])[0].get("attributes", {}).get("guid")
+                        if service_name and guid:
+                            entity_guids[service_name] = guid
+        except Exception as e:
+            print("Error reading terraform.tfstate:", e)
+
+        for service_name, guid in entity_guids.items():
+            matching_application_guids[service_name] = guid
+            print(f"Service Name: {service_name}, Entity GUID: {guid}")
+
+        update_entity_guids_csv(matching_application_guids)
+        print("Updated data.csv with entity GUIDs")
+
+        if os.path.exists('terraform.tfstate'):
+            os.remove('terraform.tfstate')
+
+        if os.path.exists('terraform.tfstate.backup'):
+            os.remove('terraform.tfstate.backup')
+
+        if os.path.exists('data.tf'):
+            os.remove('data.tf')
+
+        if os.path.exists('.terraform.lock.hcl'):
+            os.remove('.terraform.lock.hcl')
+
+        if os.path.exists('.terraform'):
+            shutil.rmtree('.terraform')
+
+
+    else:
+        print("No matching application names found")
