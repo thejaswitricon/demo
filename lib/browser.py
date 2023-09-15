@@ -4,9 +4,12 @@ import requests
 import subprocess
 import time
 import shutil
+import re
+import json
+
 
 # Define the base directory where you want to search for subdirectories
-base_directory = "../dashboards/dynamic"
+base_directory = "./dashboards/dynamic"
 
 # Path to the data.csv file that contains folder names
 data_csv_file = os.path.join(base_directory, "data.csv")
@@ -27,9 +30,10 @@ if os.path.exists(data_csv_file):
         # Construct the paths for CSV files within the current folder
         CSV_FILE_SOURCE = os.path.join(base_directory, folder_name, "data-source.csv")
         destination_file = os.path.join(base_directory, folder_name, "data.csv")
-        provider_tf_path = "../provider/provider.tf"
+        provider_tf_path = "./provider/provider.tf"
         data_tf_path = "data.tf"
         MONITORS_API_ENDPOINT = "https://synthetics.newrelic.com/synthetics/api/v3/monitors"
+        BROWSER_APPS_API_ENDPOINT = "https://api.newrelic.com/v2/browser_applications.json"
         PAGE_SIZE = 100  # Number of monitors to retrieve per page
         shutil.copy(CSV_FILE_SOURCE, destination_file)
 
@@ -82,54 +86,25 @@ if os.path.exists(data_csv_file):
                 if row["rowType"] == "service":
                     service_names.append(row["serviceName"])
 
-        # Fetch monitors and update CSV file with monitor IDs
-        # for monitor_type in ["SIMPLE", "CERT_CHECK", "SCRIPT_API", "SCRIPT_BROWSER", "BROWSER"]:
-        #     monitors = fetch_monitors_by_type(monitor_type)
-        #     for monitor in monitors:
-        #         for service_name in service_names:
-        #             if monitor["name"].startswith(service_name):
-        #                 parts = monitor["name"].split()
-        #                 if len(parts) > 1:
-        #                     service_hash = parts[-1]
-        #                     if service_hash.startswith("#"):
-        #                         with open(destination_file, mode="r") as csv_file:
-        #                             csv_reader = csv.DictReader(csv_file)
-        #                             data = list(csv_reader)
-        #                             for row in data:
-        #                                 if row["serviceName"] == service_name:
-        #                                     if row["rowType"] != "product":
-        #                                         if "#health" in parts and "#ping" in parts and "#critical" in parts:
-        #                                             row["healthMonitorId"] = monitor["id"]
-        #                                         elif "#ping" in parts and "#critical" in parts:
-        #                                             row["pingMonitorId"] = monitor["id"]
-        #                                     elif "#script" in parts and "#critical" in parts:
-        #                                         row["scriptMonitorId"] = monitor["id"]
-        #                         with open(destination_file, mode="w", newline="") as csv_file:
-        #                             fieldnames = data[0].keys()
-        #                             csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        #                             csv_writer.writeheader()
-        #                             csv_writer.writerows(data)
-        #                         break
+        # Script 2: Updating Browser Entity GUIDs
 
-        # Script 2: Updating Entity GUIDs
-
-        def fetch_application_names(filter_name, offset):
+        def fetch_browser_names(filter_name, offset):
             params = {
                 "filter[name]": filter_name,
                 "offset": offset,
                 "limit": PAGE_SIZE
             }
 
-            response = requests.get(APPLICATIONS_API_ENDPOINT, headers=headers, params=params, timeout=20)
+            response = requests.get(BROWSER_APPS_API_ENDPOINT, headers=headers, params=params, timeout=20)
 
             if response.status_code == 200:
-                applications_data = response.json().get("applications")
+                applications_data = response.json().get("browser_applications")
                 return applications_data
             else:
                 print(f"Failed to retrieve application names for filter: {filter_name}")
                 return []
-
-        def update_entity_guids_csv(guids_dict):
+            
+        def update_browser_guids_csv(guids_dict):
             updated_rows = []
             with open(destination_file, 'r') as csvfile:
                 reader = csv.DictReader(csvfile)
@@ -138,7 +113,7 @@ if os.path.exists(data_csv_file):
                     updated_row = row.copy()
                     if service_name in guids_dict:
                         updated_guid = guids_dict[service_name]
-                        updated_row['apmEntityGuid'] = updated_guid if row["rowType"] == "service" else ""
+                        updated_row['browserEntityGuid'] = updated_guid if row["rowType"] == "service" else ""
                     updated_rows.append(updated_row)
 
             with open(destination_file, 'w', newline='') as csvfile:
@@ -146,9 +121,9 @@ if os.path.exists(data_csv_file):
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
                 writer.writerows(updated_rows)
-
+                
         if __name__ == "__main__":
-            matching_application_guids = {}
+            matching_browser_guid = {}
 
             with open(destination_file, mode="r") as file:
                 reader = csv.DictReader(file)
@@ -157,45 +132,42 @@ if os.path.exists(data_csv_file):
                     if service_name:
                         offset = 0
                         while True:
-                            applications_data = fetch_application_names(service_name, offset)
-                            if not applications_data:
+                            browser_data = fetch_browser_names(service_name, offset)
+                            if not browser_data:
                                 break
 
-                            for app_data in applications_data:
+                            for app_data in browser_data:
                                 app_name = app_data.get("name")
-                                matching_application_guids[app_name] = None
+                                matching_browser_guid[app_name] = None
                                 print(f"Matching application found: {app_name}")
 
-                            if len(applications_data) < PAGE_SIZE:
+                            if len(browser_data) < PAGE_SIZE:
                                 break
 
                             offset += PAGE_SIZE
-
-            if matching_application_guids:
-                with open("data.tf", "w") as tf_file:
+                            
+        if matching_browser_guid:
+                with open("data.tf", "a") as tf_file:
                     tf_file.write('''
-        # Terraform data blocks
+        # Terraform data blocks for Browser applications
         ''')
-                    for idx, service_name in enumerate(matching_application_guids, start=1):
+                    for idx, service_name in enumerate(matching_browser_guid, start=1):
                         tf_config = f'''
-        data "newrelic_entity" "app_{idx}" {{
+        data "newrelic_entity" "browser_app_{idx}" {{
         name = "{service_name}"
-        domain = "APM"
+        domain = "BROWSER"
         }}
         '''
                         tf_output_config = f'''
-        output "{service_name}" {{
-      value = {{
-        guid           = data.newrelic_entity.app_{idx}.guid
-        application_id = data.newrelic_entity.app_{idx}.application_id
-      }}
-    }}
-    '''
+        output "{service_name}_browser" {{
+        value = data.newrelic_entity.browser_app_{idx}.guid
+        }}
+        '''
                         tf_file.write(tf_config)
                         tf_file.write('\n')
                         tf_file.write(tf_output_config)  # Adding output configuration
                         tf_file.write('\n')
-                        print(f"Terraform configuration and output added for: {service_name}")
+                        print(f"Terraform configuration and output added for Browser Application: {service_name}")
 
                 # Read the content of provider.tf and data.tf
                 with open(provider_tf_path, "r") as provider_file, open(data_tf_path, "r") as data_file:
@@ -243,7 +215,7 @@ if os.path.exists(data_csv_file):
                             print(f"Extracted GUID for {service_name}: {guid}")
 
                 # Update the CSV based on the tf_outputs dictionary
-                update_entity_guids_csv(tf_outputs)
+                update_browser_guids_csv(tf_outputs)
                 print("CSV updated with GUIDs.")
 
                 if os.path.exists('terraform.tfstate'):
@@ -252,12 +224,8 @@ if os.path.exists(data_csv_file):
                 if os.path.exists('terraform.tfstate.backup'):
                     os.remove('terraform.tfstate.backup')
 
-                # if os.path.exists('data.tf'):
-                #     os.remove('data.tf')
-
-            else:
-                print("No matching application names found")
-
-
+                if os.path.exists('data.tf'):
+                    os.remove('data.tf')
+            
 else:
     print("data.csv file not found in the dynamic folder")
