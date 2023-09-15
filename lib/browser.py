@@ -187,14 +187,14 @@ if os.path.exists(data_csv_file):
                 subprocess.run(['terraform', 'fmt'], check=True)  # nosec
                 print("Terraform format check complete.")
 
-                # # Run terraform validate to check the configuration's validity
-                # validate_process = subprocess.run(['terraform', 'validate'], capture_output=True, text=True)  # nosec  
-                # if validate_process.returncode == 0:
-                #     print("Terraform validation successful.")
-                # else:
-                #     print("Terraform validation failed:")
-                #     print(validate_process.stdout)
-                #     print(validate_process.stderr)
+                # Run terraform validate to check the configuration's validity
+                validate_process = subprocess.run(['terraform', 'validate'], capture_output=True, text=True)  # nosec  
+                if validate_process.returncode == 0:
+                    print("Terraform validation successful.")
+                else:
+                    print("Terraform validation failed:")
+                    print(validate_process.stdout)
+                    print(validate_process.stderr)
 
                 subprocess.run(['terraform', 'init', '-input=false', '-backend=false'], check=True)  # nosec
 
