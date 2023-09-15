@@ -46,7 +46,7 @@ jobs:
     - name: Run final.py
       run: |
         cd lib
-        python final.py
+        python browser.py
 
     - name: Get Current Date
       id: date
