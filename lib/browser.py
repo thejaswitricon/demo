@@ -9,7 +9,7 @@ import json
 
 
 # Define the base directory where you want to search for subdirectories
-base_directory = "./dashboards/dynamic"
+base_directory = "../dashboards/dynamic"
 
 # Path to the data.csv file that contains folder names
 data_csv_file = os.path.join(base_directory, "data.csv")
@@ -30,7 +30,7 @@ if os.path.exists(data_csv_file):
         # Construct the paths for CSV files within the current folder
         CSV_FILE_SOURCE = os.path.join(base_directory, folder_name, "data-source.csv")
         destination_file = os.path.join(base_directory, folder_name, "data.csv")
-        provider_tf_path = "./provider/provider.tf"
+        provider_tf_path = "../provider/provider.tf"
         data_tf_path = "data.tf"
         MONITORS_API_ENDPOINT = "https://synthetics.newrelic.com/synthetics/api/v3/monitors"
         BROWSER_APPS_API_ENDPOINT = "https://api.newrelic.com/v2/browser_applications.json"
