@@ -136,9 +136,10 @@ if os.path.exists(data_csv_file):
                 for row in reader:
                     service_name = row.get('serviceName', '')
                     updated_row = row.copy()
-                    if service_name in guids_dict:
-                        updated_guid = guids_dict[service_name]
-                        updated_row['apmEntityGuid'] = updated_guid if row["rowType"] == "service" else ""
+                    if service_name in guids_dict and row["rowType"] == "service":
+                        service_data = guids_dict[service_name]
+                        updated_row['apmEntityGuid'] = service_data.get('guid', '')
+                        updated_row['apmAppId'] = service_data.get('application_id', '')
                     updated_rows.append(updated_row)
 
             with open(destination_file, 'w', newline='') as csvfile:
@@ -232,16 +233,28 @@ if os.path.exists(data_csv_file):
                     apply_output = apply_process.stdout
 
                     # Extract GUIDs from the apply_output using string manipulation or regex
-                    tf_outputs = {}  # Create an empty dictionary to store extracted GUIDs
-                    output_lines = apply_output.split("\n")
-                    for line in output_lines:
-                        if "=" in line:
-                            parts = line.split("=")
-                            service_name = parts[0].strip()
-                            guid = parts[1].strip().replace('"', '')
-                            tf_outputs[service_name] = guid
-                            print(f"Extracted GUID for {service_name}: {guid}")
-
+                    tf_outputs = {}
+                      # Create an empty dictionary to store extracted GUIDs
+                    output_lines = apply_output.strip().split('\n\n')
+                    # Parse and store the data in the dictionary
+                    for section in output_lines:
+                        # Split each section into lines
+                        lines = section.strip().split('\n')
+                        service_name = lines[0].strip()
+                        
+                        # Initialize a dictionary for the service data
+                        service_data = {}
+                        
+                        # Parse the key-value pairs for the service data
+                        for line in lines[1:]:
+                            key, value = line.strip().split('=')
+                            key = key.strip().strip('"')
+                            value = value.strip().strip('"')
+                            service_data[key] = value
+                        
+                        # Store the service data in the main dictionary
+                        tf_outputs[service_name] = service_data
+                    print(tf_outputs)
                 # Update the CSV based on the tf_outputs dictionary
                 update_entity_guids_csv(tf_outputs)
                 print("CSV updated with GUIDs.")
@@ -261,3 +274,4 @@ if os.path.exists(data_csv_file):
 
 else:
     print("data.csv file not found in the dynamic folder")
+    
